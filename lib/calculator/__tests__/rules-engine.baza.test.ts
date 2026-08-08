@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calculateBaseSystem } from "@/lib/calculator/engine";
-import { buildBazaScope, evaluateRules } from "@/lib/calculator/rules-engine";
+import { buildScope, evaluateRules } from "@/lib/calculator/rules-engine";
 import { DEFAULT_CALCULATOR_RULES } from "@/lib/calculator/rules-types";
 import { DEFAULT_CALCULATOR_SETTINGS } from "@/lib/calculator/settings";
 import { emptyCalculatorAnswers, type CalculatorAnswers } from "@/lib/calculator/types";
@@ -14,7 +14,7 @@ import { emptyCalculatorAnswers, type CalculatorAnswers } from "@/lib/calculator
  */
 
 function bazaTotalFromRules(answers: CalculatorAnswers): number {
-  const scope = buildBazaScope(answers, DEFAULT_CALCULATOR_SETTINGS);
+  const scope = buildScope(answers, DEFAULT_CALCULATOR_SETTINGS);
   const result = evaluateRules(DEFAULT_CALCULATOR_RULES, scope);
   return result.totalsByCategory.baza ?? 0;
 }

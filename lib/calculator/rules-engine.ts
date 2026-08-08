@@ -57,7 +57,7 @@ function evaluateRuleAmount(rule: CalculatorRule, scope: FormulaScope): number {
       return resolveQuantity(rule.quantity, scope) * resolvePrice(rule.unitPrice, scope);
     case "bom": {
       const linesTotal = rule.lines.reduce(
-        (sum, line) => sum + resolveQuantity(line.quantity, scope) * line.unitPrice,
+        (sum, line) => sum + resolveQuantity(line.quantity, scope) * resolvePrice(line.unitPrice, scope),
         0,
       );
       const laborTotal = rule.labor ? resolveQuantity(rule.labor.hours, scope) * rule.labor.ratePerHour : 0;
@@ -83,7 +83,7 @@ export type RuleEvaluationResult = {
 
 /**
  * Liczy cały zestaw reguł na podanym scope startowym (zbudowanym z answers+settings — patrz
- * `buildBazaScope` niżej dla przykładu kategorii "baza"). Reguły pomocnicze (contributesToTotal =
+ * `buildScope` niżej). Reguły pomocnicze (contributesToTotal =
  * false) NIE są zaokrąglane przed wpisaniem do scope kolejnych reguł — pełna precyzja przechodzi
  * dalej, tak jak w arkuszu kalkulacyjnym (zaokrąglenie dopiero na widocznych pozycjach oferty).
  */
@@ -118,10 +118,14 @@ export function evaluateRules(rules: CalculatorRule[], initialScope: FormulaScop
       continue;
     }
 
-    valuesByKey[rule.key] = roundMoney(rawValue);
+    const roundedValue = roundMoney(rawValue);
+    valuesByKey[rule.key] = roundedValue;
 
     if (rule.roundingGroup === null) {
-      totalsByCategory[rule.category] = roundMoney((totalsByCategory[rule.category] ?? 0) + rawValue);
+      // Reguła bez grupy zaokrągla się NIEZALEŻNIE, a do sumy kategorii wchodzi już zaokrąglona
+      // wartość (dokładnie jak w źródle: calculateFunctionalBudgets zaokrągla KAŻDĄ kategorię z
+      // osobna, a dopiero wywołujący sumuje te już-zaokrąglone wartości).
+      totalsByCategory[rule.category] = roundMoney((totalsByCategory[rule.category] ?? 0) + roundedValue);
     } else {
       const key = groupKey(rule);
       rawGroupSums.set(key, (rawGroupSums.get(key) ?? 0) + rawValue);
@@ -137,8 +141,14 @@ export function evaluateRules(rules: CalculatorRule[], initialScope: FormulaScop
   return { valuesByKey, totalsByCategory, total };
 }
 
-/** Scope dla kategorii "Baza systemu" — pola ankiety i stałe z ustawień, które reguły baza.* mogą nazwać po imieniu. */
-export function buildBazaScope(
+/**
+ * Scope wspólny dla wszystkich kategorii reguł — pola ankiety i stałe z ustawień, które dowolna
+ * reguła może nazwać po imieniu w swojej formule. Rośnie wraz z kolejnymi migrowanymi kategoriami
+ * (na razie: baza, funkcjonalne). Pomocnicze wartości pośrednie (np. rgbwModuleQty,
+ * obwodyOswietleniaOnOff) są liczone RAZ jako reguły pomocnicze i współdzielone między kategoriami
+ * — dokładnie jak w engine.ts, gdzie te same funkcje pomocnicze zasilają kilka miejsc naraz.
+ */
+export function buildScope(
   answers: import("@/lib/calculator/types").CalculatorAnswers,
   settings: import("@/lib/calculator/settings").CalculatorSettings,
 ): FormulaScope {
@@ -181,8 +191,22 @@ export function buildBazaScope(
     scenyOswietleniowe: answers.scenyOswietleniowe ? 1 : 0,
     czujnikiOtwarciaOkien: answers.addons.czujnikiOtwarciaOkien ? 1 : 0,
     odlegloscKm: answers.odlegloscKm,
+    satelWOptimum: answers.satelWOptimum ? 1 : 0,
+    czyCzujkiRecznie: answers.czyCzujkiRecznie ? 1 : 0,
+    iloscCzujekLoxone: answers.iloscCzujekLoxone,
+    liczbaPomieszczenZOknami: answers.liczbaPomieszczenZOknami,
+    iloscCzujekSatel: answers.iloscCzujekSatel,
+    iloscCzujekBezpieczenstwa: answers.iloscCzujekBezpieczenstwa,
+    jestKominek: answers.jestKominek ? 1 : 0,
+    jestGaz: answers.jestGaz ? 1 : 0,
+    liczbaDrzwiWejsciowych: answers.liczbaDrzwiWejsciowych,
+    liczbaWyjscNaTaras: answers.liczbaWyjscNaTaras,
+    czyOknaCzujnikiFabryczne: answers.czyOknaCzujnikiFabryczne ? 1 : 0,
+    iloscGrzejnikowSterowanych: answers.iloscGrzejnikowSterowanych,
+    wspolczynnikOutdoor: answers.wspolczynnikOutdoor,
 
     // -- ustawienia (edytowalne w panelu) --
+    laborRatePerHour: settings.laborRatePerHour,
     projektJednaKondygnacja: s.projektJednaKondygnacja,
     projektWieleKondygnacji: s.projektWieleKondygnacji,
     projektDuzyDomProgM2: s.projektDuzyDomProgM2,

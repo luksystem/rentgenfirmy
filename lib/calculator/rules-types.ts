@@ -51,7 +51,7 @@ export type BomLine = {
   id: string;
   label: string;
   quantity: QuantitySource;
-  unitPrice: number;
+  unitPrice: RulePrice;
 };
 
 type RuleBase = {
@@ -146,6 +146,30 @@ function tieredRule(
   return { ...RULE_DEFAULTS, kind: "tiered", ...partial };
 }
 
+function bomRule(
+  partial: Pick<BomRule, "key" | "category" | "label" | "lines"> & Partial<BomRule>,
+): BomRule {
+  return { ...RULE_DEFAULTS, kind: "bom", labor: null, ...partial };
+}
+
+function fieldQty(field: string): QuantitySource {
+  return { type: "field", field };
+}
+
+function formulaQty(expression: string): QuantitySource {
+  return { type: "formula", expression };
+}
+
+function fixedQty(value: number): QuantitySource {
+  return { type: "fixed", value };
+}
+
+let bomLineCounter = 0;
+function line(label: string, quantity: QuantitySource, unitPrice: RulePrice): BomLine {
+  bomLineCounter += 1;
+  return { id: `bl-${bomLineCounter}`, label, quantity, unitPrice };
+}
+
 /**
  * Reguły kategorii "Baza systemu" — 1:1 odtworzenie calculateBaseSystem/calculateBazaZasilania
  * z engine.ts (patrz komentarze źródłowe tam: DANE!T109:T111). Kolejność ma znaczenie: reguły
@@ -155,12 +179,21 @@ function tieredRule(
 export const DEFAULT_CALCULATOR_RULES: CalculatorRule[] = [
   // --- pomocnicze (nie wliczają się same w sobie do sumy, tylko udostępniają wartość formułom niżej) ---
   formulaRule({
+    key: "baza.obwodyOswietleniaOnOff",
+    category: "baza",
+    label: "Obwody oświetlenia ON/OFF (pomocnicza)",
+    contributesToTotal: false,
+    notes: "Współdzielona z kategorią funkcjonalną Oświetlenie (przekaźniki Loxone).",
+    expression:
+      "IF(strefaPrywatna;4;0)+IF(strefaOtwarta;6;0)+IF(komunikacja;2;0)+liczbaSypialniDodatkowych*2+liczbaPomieszczenWilgotnych+liczbaPozostalychPomieszczen*2+iloscGarazy*2",
+  }),
+  formulaRule({
     key: "baza.oswietleniePunkty",
     category: "baza",
     label: "Punkty oświetlenia — obwody ON/OFF + ściemniane LED 24V (pomocnicza)",
     contributesToTotal: false,
     expression:
-      "(IF(strefaPrywatna;4;0)+IF(strefaOtwarta;6;0)+IF(komunikacja;2;0)+liczbaSypialniDodatkowych*2+liczbaPomieszczenWilgotnych+liczbaPozostalychPomieszczen*2+iloscGarazy*2)" +
+      "obwodyOswietleniaOnOff" +
       "+(IF(strefaPrywatna;2;0)+IF(strefaOtwarta;4;0)+IF(komunikacja;2;0)+liczbaSypialniDodatkowych+liczbaPomieszczenWilgotnych)",
   }),
   formulaRule({
@@ -325,6 +358,189 @@ export const DEFAULT_CALCULATOR_RULES: CalculatorRule[] = [
     expression: "paliwo+dieta+nocleg+logistykaStalaOplata+godzinyDojazdu",
     notes:
       "Zweryfikowane co do grosza na 2 realnych przykładach z różną odległością: Dewódzki (90 km, KNX) = 15437,20 zł, Gorzelak (25 km, bez KNX) = 9483,92 zł (razem z pozostałymi pozycjami bazy zasilania powyżej).",
+  }),
+
+  // ==================================================================================
+  // KATEGORIE FUNKCJONALNE — 1:1 odtworzenie calculateFunctionalBudgets z engine.ts.
+  // Każda kategoria = lista materiałowa (BOM) + robocizna, × trudny klient (zewnętrzne
+  // dodatkowo × współczynnik outdoor). Ceny sprzętu przeniesione literalnie z dawnego
+  // CalculatorHardwareCatalog (settings.ts) — ta lista teraz JEST cennikiem, edytowalnym
+  // wprost jako wiersze BOM, bez pośredniej tabeli w ustawieniach.
+  // ==================================================================================
+  formulaRule({
+    key: "funkcjonalne.czujkaLoxoneQty",
+    category: "funkcjonalne",
+    label: "Ilość czujek Loxone — Oświetlenie (pomocnicza)",
+    contributesToTotal: false,
+    expression: "IF(czyCzujkiRecznie;iloscCzujekLoxone;IF(satelWOptimum;0;MAX(0;liczbaPomieszczenZOknami-3)))",
+  }),
+  bomRule({
+    key: "funkcjonalne.oswietlenie",
+    category: "funkcjonalne",
+    label: "Oświetlenie wewnętrzne",
+    gate: "scenyOswietleniowe",
+    postMultipliers: ["trudnyKlientWspolczynnik"],
+    lines: [
+      line("Przekaźnik Loxone 14 kanałów", formulaQty("ROUNDUP(obwodyOswietleniaOnOff/16;0)"), 1584.7),
+      line("Moduł RGBW", fieldQty("rgbwModuleQty"), 487.6),
+      line("Czujka Loxone", fieldQty("czujkaLoxoneQty"), 487.6),
+    ],
+    labor: { hours: formulaQty("czujkaLoxoneQty*2"), ratePerHour: 120 },
+  }),
+
+  formulaRule({
+    key: "funkcjonalne.bezpieczenstwoAktywne",
+    category: "funkcjonalne",
+    label: "Bezpieczeństwo aktywne (pomocnicza — zerowana przy „tylko rozdzielnia”)",
+    contributesToTotal: false,
+    expression: "AND(alarmIKontrolaDostepu;NOT(tylkoRozdzielnia))",
+  }),
+  formulaRule({
+    key: "funkcjonalne.extensionDIQty",
+    category: "funkcjonalne",
+    label: "Ilość Extension DI (pomocnicza)",
+    contributesToTotal: false,
+    expression: "IF(satelWOptimum;0;2)",
+  }),
+  formulaRule({
+    key: "funkcjonalne.zaworQty",
+    category: "funkcjonalne",
+    label: "Ilość zaworów odcięcia wody (pomocnicza)",
+    contributesToTotal: false,
+    expression: "IF(liczbaPomieszczenWilgotnych>0;1;0)",
+  }),
+  formulaRule({
+    key: "funkcjonalne.satelSlaveQty",
+    category: "funkcjonalne",
+    label: "Ilość pozycji zależnych od SATEL — centrala/INT-KNX/klawiatury (pomocnicza)",
+    contributesToTotal: false,
+    expression: "IF(satelWOptimum;1;0)",
+  }),
+  formulaRule({
+    key: "funkcjonalne.czujkiSufitoweQty",
+    category: "funkcjonalne",
+    label: "Ilość czujek sufitowych (pomocnicza)",
+    contributesToTotal: false,
+    expression: "IF(czyCzujkiRecznie;iloscCzujekSatel;IF(satelWOptimum;MAX(0;liczbaPomieszczenZOknami-3);0))",
+  }),
+  formulaRule({
+    key: "funkcjonalne.czujkiDualneQty",
+    category: "funkcjonalne",
+    label: "Ilość czujek dualnych (pomocnicza)",
+    contributesToTotal: false,
+    expression: "IF(czyCzujkiRecznie;0;iloscGarazy)",
+  }),
+  formulaRule({
+    key: "funkcjonalne.czujkiBezpieczenstwaQty",
+    category: "funkcjonalne",
+    label: "Ilość czujek bezpieczeństwa dym/uśpienie (pomocnicza)",
+    contributesToTotal: false,
+    expression: "IF(czyCzujkiRecznie;iloscCzujekBezpieczenstwa;IF(jestKominek;1;0)+IF(jestGaz;1;0))",
+  }),
+  formulaRule({
+    key: "funkcjonalne.kontaktronOknoDrzwiQty",
+    category: "funkcjonalne",
+    label: "Ilość kontaktronów okno/drzwi (pomocnicza)",
+    contributesToTotal: false,
+    expression: "liczbaDrzwiWejsciowych+liczbaWyjscNaTaras",
+  }),
+  bomRule({
+    key: "funkcjonalne.bezpieczenstwo",
+    category: "funkcjonalne",
+    label: "Systemy bezpieczeństwa",
+    gate: "bezpieczenstwoAktywne",
+    postMultipliers: ["trudnyKlientWspolczynnik"],
+    lines: [
+      line("Extension DI", fieldQty("extensionDIQty"), 1828.5),
+      line("Zawór odcięcia wody", fieldQty("zaworQty"), 792.35),
+      line("Centrala Alarmowa (baza)", fieldQty("satelSlaveQty"), 4632.2),
+      line("INT-KNX", fieldQty("satelSlaveQty"), 1219.0),
+      line("Syrena alarmowa", fixedQty(1), 365.7),
+      line("Czujki sufitowe", fieldQty("czujkiSufitoweQty"), 275.6),
+      line("Czujki Dualne", fieldQty("czujkiDualneQty"), 268.18),
+      line("Czujki bezpieczeństwa (dym/uśpienie)", fieldQty("czujkiBezpieczenstwaQty"), 381.6),
+      line("Kontaktron brama", fieldQty("iloscGarazy"), 365.7),
+      line(
+        "Kontaktron okno/drzwi",
+        fieldQty("kontaktronOknoDrzwiQty"),
+        { ifField: "czyOknaCzujnikiFabryczne", whenTrue: 120, whenFalse: 270 },
+      ),
+      line("Czujka zalania", fieldQty("liczbaPomieszczenWilgotnych"), 426.65),
+      line("Klawiatura mała (SATEL)", fieldQty("satelSlaveQty"), 1340.9),
+      line("Klawiatura garaż strefowa (SATEL)", fieldQty("satelSlaveQty"), 670.45),
+    ],
+    labor: {
+      hours: formulaQty(
+        "zaworQty+satelSlaveQty*18+2+czujkiSufitoweQty*2+czujkiDualneQty+czujkiBezpieczenstwaQty*2+iloscGarazy*2+kontaktronOknoDrzwiQty*2+liczbaPomieszczenWilgotnych*2",
+      ),
+      ratePerHour: 120,
+    },
+  }),
+
+  formulaRule({
+    key: "funkcjonalne.glowicaQty",
+    category: "funkcjonalne",
+    label: "Ilość głowic grzejnikowych (pomocnicza)",
+    contributesToTotal: false,
+    expression: "MAX(0;iloscGrzejnikowSterowanych)",
+  }),
+  formulaRule({
+    key: "funkcjonalne.czujniki1WireQty",
+    category: "funkcjonalne",
+    label: "Ilość czujników 1-Wire (pomocnicza)",
+    contributesToTotal: false,
+    expression: "IF(scenyOswietleniowe;strefyOgrzewaniaPodlogowego+2;0)",
+  }),
+  bomRule({
+    key: "funkcjonalne.temperatura",
+    category: "funkcjonalne",
+    label: "Sterowanie temperaturą",
+    gate: "sterowanieTemperatura",
+    postMultipliers: ["trudnyKlientWspolczynnik"],
+    lines: [
+      line("Przekaźnik Loxone 14 kanałów", formulaQty("ROUNDUP(strefyOgrzewaniaPodlogowego/8;0)"), 1584.7),
+      line("Rozszerzenie 1-Wire", formulaQty("IF(scenyOswietleniowe;1;0)"), 792.35),
+      line("Siłownik Salus", formulaQty("strefyOgrzewaniaPodlogowego*2"), 146.28),
+      line("Głowica grzejnika", fieldQty("glowicaQty"), 548.55),
+      line("Czujniki 1-Wire", fieldQty("czujniki1WireQty"), 182.85),
+    ],
+    labor: { hours: formulaQty("glowicaQty+czujniki1WireQty"), ratePerHour: 120 },
+  }),
+
+  formulaRule({
+    key: "funkcjonalne.roletyRelayQty",
+    category: "funkcjonalne",
+    label: "Ilość przekaźników — Rolety (pomocnicza)",
+    contributesToTotal: false,
+    expression: "ROUNDUP((liczbaRolet*2)/14;0)",
+  }),
+  bomRule({
+    key: "funkcjonalne.rolety",
+    category: "funkcjonalne",
+    label: "Rolety / żaluzje / karnisze",
+    gate: "planujeRolety",
+    postMultipliers: ["trudnyKlientWspolczynnik"],
+    lines: [line("Przekaźnik Loxone 14 kanałów", fieldQty("roletyRelayQty"), 1584.7)],
+    labor: { hours: formulaQty("roletyRelayQty*5"), ratePerHour: 120 },
+  }),
+
+  formulaRule({
+    key: "funkcjonalne.zewnetrzneRelayQty",
+    category: "funkcjonalne",
+    label: "Ilość przekaźników — Zewnętrzne (pomocnicza)",
+    contributesToTotal: false,
+    expression: "ROUNDUP((iloscOswietlenZewnetrznych+iloscSekcjiPodlewania)/14;0)",
+  }),
+  formulaRule({
+    key: "funkcjonalne.zewnetrzne",
+    category: "funkcjonalne",
+    label: "Zewnętrzne (ogród, elewacja)",
+    gate: "sterowanieOgrodem",
+    postMultipliers: ["wspolczynnikOutdoor"],
+    expression:
+      "ROUND((zewnetrzneRelayQty*1584.7+1462.8+16*120)*IF(trudnyKlientWspolczynnik>0;trudnyKlientWspolczynnik;1);2)",
+    notes:
+      "Jedyna kategoria z dwoma mnożnikami naraz (trudny klient × współczynnik outdoor). W źródle to DWA osobne zaokrąglenia z rzędu (najpierw × trudny klient, zaokrąglenie, potem × outdoor, drugie zaokrąglenie) — stąd jawny ROUND() w środku formuły zamiast dwóch reguł postMultipliers na raz. Znalezione i naprawione dzięki szerokiemu testowi porównawczemu (rozbieżność -0,01 zł przy trudny=1,15 i outdoor=1,4).",
   }),
 ];
 
