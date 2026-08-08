@@ -74,9 +74,14 @@ export default function CalculatorSettingsPage() {
         title="Ustawienia kalkulatora ofert"
         description="Cennik pakietu OPTIMUM — baza systemu, kategorie funkcjonalne, instalacja elektryczna, dodatki i rabaty. Wartości startowe zweryfikowane przeciw plikowi ofertowemu."
         action={
-          <Button variant="secondary" asChild>
-            <Link href="/kalkulacje">Kalkulacje</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" asChild>
+              <Link href="/kalkulacje/reguly">Reguły logiki</Link>
+            </Button>
+            <Button variant="secondary" asChild>
+              <Link href="/kalkulacje">Kalkulacje</Link>
+            </Button>
+          </div>
         }
       />
 
