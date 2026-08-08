@@ -159,6 +159,12 @@ function bomRule(
   return { ...RULE_DEFAULTS, kind: "bom", labor: null, ...partial };
 }
 
+function quantityRule(
+  partial: Pick<QuantityRule, "key" | "category" | "label" | "quantity" | "unitPrice"> & Partial<QuantityRule>,
+): QuantityRule {
+  return { ...RULE_DEFAULTS, kind: "quantity", ...partial };
+}
+
 function fieldQty(field: string): QuantitySource {
   return { type: "field", field };
 }
@@ -775,6 +781,219 @@ export const DEFAULT_CALCULATOR_RULES: CalculatorRule[] = [
     expression: "IF(kompleksowaInstalacja;-1*ROUND(ROUND(instalacja;2)*(instalacjaKompleksowaPercent/100);2);0)",
     notes:
       "Ujemna pozycja (rabat) — obniża sumę kategorii Elektryka. Dotyczy WYŁĄCZNIE tej kategorii, nie całej oferty. Trzy celowe detale zgodne ze źródłem co do grosza: (1) rabat liczy się od JUŻ ZAOKRĄGLONEJ sumy instalacji, nie surowej; (2) nawiasy wokół (percent/100) wymuszają TĘ SAMĄ kolejność działań co w źródle (net*(percent/100), nie (net*percent)/100) — różna kolejność mnożenia/dzielenia daje różny wynik zmiennoprzecinkowy dokładnie na granicy pół grosza; (3) kwota rabatu jest zaokrąglana jako liczba DODATNIA przed zanegowaniem, bo Math.round() w JS zaokrągla -x.5 w dół, nie w górę jak dla +x.5. Wszystkie trzy znalezione szerokim testem porównawczym.",
+  }),
+
+  // ==================================================================================
+  // DODATKI — 1:1 odtworzenie calculateAddons z engine.ts. 22 niezależne pozycje typu
+  // ilość×cena, każda z własnym checkboxem. Większość skaluje się trudnym klientem —
+  // 6 (rozdzielnia +++ i 5 dodatków premium) świadomie nie, zgodnie ze źródłem.
+  // ==================================================================================
+  quantityRule({
+    key: "dodatki.stacjaPogodowa",
+    category: "dodatki",
+    label: "Stacja pogodowa",
+    gate: "addon_stacjaPogodowa",
+    postMultipliers: ["trudnyKlientWspolczynnik"],
+    quantity: fixedQty(1),
+    unitPrice: 3150,
+  }),
+  quantityRule({
+    key: "dodatki.oswietlenieSciemniane230V",
+    category: "dodatki",
+    label: "Oświetlenie ściemniane 230V",
+    gate: "addon_oswietlenieSciemniane230V",
+    postMultipliers: ["trudnyKlientWspolczynnik"],
+    quantity: formulaQty("ROUNDUP(iloscOswSciemniane/4;0)"),
+    unitPrice: 2316.1,
+  }),
+  quantityRule({
+    key: "dodatki.oswietlenieKoloroweRGBW",
+    category: "dodatki",
+    label: "Oświetlenie kolorowe RGBW",
+    gate: "addon_oswietlenieKoloroweRGBW",
+    postMultipliers: ["trudnyKlientWspolczynnik"],
+    quantity: fixedQty(1),
+    unitPrice: 687.6,
+  }),
+  quantityRule({
+    key: "dodatki.czujnikiOtwarciaOkien",
+    category: "dodatki",
+    label: "Czujniki otwarcia okien",
+    gate: "addon_czujnikiOtwarciaOkien",
+    postMultipliers: ["trudnyKlientWspolczynnik"],
+    quantity: fieldQty("liczbaOkienOtwieranych"),
+    unitPrice: { ifField: "czyOknaCzujnikiFabryczne", whenTrue: 120, whenFalse: 270 },
+    notes: "Ta sama cena jednostkowa co kontaktron w kategorii Bezpieczeństwo (ZESTAWIENIE!F36).",
+  }),
+  quantityRule({
+    key: "dodatki.klawiaturyNfc",
+    category: "dodatki",
+    label: "Klawiatury dostępowe NFC",
+    gate: "addon_klawiaturyNfc",
+    postMultipliers: ["trudnyKlientWspolczynnik"],
+    quantity: fieldQty("iloscKlawiaturNfc"),
+    unitPrice: 1950.4,
+  }),
+  quantityRule({
+    key: "dodatki.przygotowanieDostepuDrzwi",
+    category: "dodatki",
+    label: "Elektrozaczep do drzwi",
+    gate: "addon_przygotowanieDostepuDrzwi",
+    postMultipliers: ["trudnyKlientWspolczynnik"],
+    quantity: fieldQty("iloscElektrozaczepow"),
+    unitPrice: 731.4,
+  }),
+  quantityRule({
+    key: "dodatki.bezpieczenstwoPlusPlusPlus",
+    category: "dodatki",
+    label: "Dodatkowe czujki bezpieczeństwa (dym/uśpienie)",
+    gate: "addon_bezpieczenstwoPlusPlusPlus",
+    postMultipliers: ["trudnyKlientWspolczynnik"],
+    quantity: fixedQty(2),
+    unitPrice: 609.5,
+    notes: "Stała ilość 2, niezależna od parametrów domu (zweryfikowane empirycznie).",
+  }),
+  quantityRule({
+    key: "dodatki.sterowaneGniazda",
+    category: "dodatki",
+    label: "Sterowane gniazda",
+    gate: "addon_sterowaneGniazda",
+    postMultipliers: ["trudnyKlientWspolczynnik"],
+    quantity: fixedQty(1),
+    unitPrice: 2681.8,
+  }),
+  quantityRule({
+    key: "dodatki.dodatkowyLicznikPradu",
+    category: "dodatki",
+    label: "Dodatkowy licznik prądu",
+    gate: "addon_dodatkowyLicznikPradu",
+    postMultipliers: ["trudnyKlientWspolczynnik"],
+    quantity: fixedQty(1),
+    unitPrice: 1828.5,
+  }),
+  quantityRule({
+    key: "dodatki.dodatkowyZasilaczUps",
+    category: "dodatki",
+    label: "Dodatkowy zasilacz UPS (rolety)",
+    gate: "addon_dodatkowyZasilaczUps",
+    postMultipliers: ["trudnyKlientWspolczynnik"],
+    quantity: fixedQty(1),
+    unitPrice: 1900,
+    notes: "Zaznaczenie tego dodatku dolicza też +500 zł do pozycji „Baza zasilania — zasilacze LED”.",
+  }),
+  quantityRule({
+    key: "dodatki.rozdzielniaPlusPlusPlus",
+    category: "dodatki",
+    label: "Rozdzielnia +++ (przeszklona)",
+    gate: "addon_rozdzielniaPlusPlusPlus",
+    quantity: fixedQty(1),
+    unitPrice: 3500,
+    notes: "Bez współczynnika trudny klient (zgodnie ze źródłem).",
+  }),
+  quantityRule({
+    key: "dodatki.budzikInteligentny",
+    category: "dodatki",
+    label: "Budzik inteligentny",
+    gate: "addon_budzikInteligentny",
+    postMultipliers: ["trudnyKlientWspolczynnik"],
+    quantity: fixedQty(1),
+    unitPrice: 1500,
+  }),
+  quantityRule({
+    key: "dodatki.przyciskUkryty",
+    category: "dodatki",
+    label: "Przycisk ukryty Touch Surface",
+    gate: "addon_przyciskUkryty",
+    postMultipliers: ["trudnyKlientWspolczynnik"],
+    quantity: fixedQty(1),
+    unitPrice: 1500,
+  }),
+  quantityRule({
+    key: "dodatki.stacjaDokujacaIpad",
+    category: "dodatki",
+    label: "Stacja dokująca do iPada",
+    gate: "addon_stacjaDokujacaIpad",
+    postMultipliers: ["trudnyKlientWspolczynnik"],
+    quantity: fixedQty(1),
+    unitPrice: 1462.8,
+    notes: "Stała ilość 1 — nie skaluje się żadną ilością (zweryfikowane, DANE!T89).",
+  }),
+  quantityRule({
+    key: "dodatki.ipad",
+    category: "dodatki",
+    label: "iPad",
+    gate: "addon_ipad",
+    postMultipliers: ["trudnyKlientWspolczynnik"],
+    quantity: fixedQty(1),
+    unitPrice: 2925.6,
+    notes: "Stała ilość 1 — nie skaluje się żadną ilością (zweryfikowane, DANE!T90).",
+  }),
+  quantityRule({
+    key: "dodatki.oswietlenieAwaryjne",
+    category: "dodatki",
+    label: "Oświetlenie awaryjne (podtrzymanie LED)",
+    gate: "addon_oswietlenieAwaryjne",
+    postMultipliers: ["trudnyKlientWspolczynnik"],
+    quantity: fixedQty(1),
+    unitPrice: 1462.8,
+  }),
+  quantityRule({
+    key: "dodatki.integracjeZInnymiSystemami",
+    category: "dodatki",
+    label: "Integracje z innymi systemami (klimatyzacja/wentylacja/rekuperacja/pompa ciepła)",
+    gate: "addon_integracjeZInnymiSystemami",
+    postMultipliers: ["trudnyKlientWspolczynnik"],
+    quantity: formulaQty(
+      "IF(platneIntegracjeZInnymiSystemami;IF(integracjaKlimatyzacja;1;0)+IF(integracjaWentylacja;1;0)+IF(integracjaRekuperacja;1;0)+IF(integracjaPompaCiepla;1;0);0)",
+    ),
+    unitPrice: 1950.4,
+    notes:
+      "CRM!Q5 „Płatne integracje z innymi systemami” — dodatkowy warunek AND, zeruje pozycję niezależnie od zaznaczonych integracji (znaleziony błąd w oryginalnym silniku, naprawiony wcześniej: bez tej bramki pozycja była zawyżana — potwierdzone na realnym przykładzie, różnica 4290,88 zł).",
+  }),
+  quantityRule({
+    key: "dodatki.dokumentacjaPowykonawcza",
+    category: "dodatki",
+    label: "Dokumentacja powykonawcza",
+    gate: "addon_dokumentacjaPowykonawcza",
+    quantity: fixedQty(1),
+    unitPrice: 0,
+    notes: "0 zł zawsze — pozycja informacyjna „w cenie”, bez trudnego klienta.",
+  }),
+  quantityRule({
+    key: "dodatki.ustaleniaZInnymiBranzami",
+    category: "dodatki",
+    label: "Ustalenia z innymi branżami z ramienia Inwestora",
+    gate: "addon_ustaleniaZInnymiBranzami",
+    quantity: fixedQty(1),
+    unitPrice: 3000,
+    notes: "Bez współczynnika trudny klient (zgodnie ze źródłem).",
+  }),
+  quantityRule({
+    key: "dodatki.konsultacjeZdalne24_7",
+    category: "dodatki",
+    label: "Konsultacje zdalne 24/7 (w czasie gwarancji)",
+    gate: "addon_konsultacjeZdalne24_7",
+    quantity: fixedQty(1),
+    unitPrice: 3000,
+    notes: "Bez współczynnika trudny klient (zgodnie ze źródłem).",
+  }),
+  quantityRule({
+    key: "dodatki.przedluzenieGwarancji12Miesiecy",
+    category: "dodatki",
+    label: "Przedłużenie gwarancji o 12 miesięcy",
+    gate: "addon_przedluzenieGwarancji12Miesiecy",
+    quantity: fixedQty(1),
+    unitPrice: 4000,
+    notes: "Bez współczynnika trudny klient (zgodnie ze źródłem).",
+  }),
+  quantityRule({
+    key: "dodatki.gwarancjaCenyOfertowej",
+    category: "dodatki",
+    label: "Gwarancja ceny od oferty do końca realizacji",
+    gate: "addon_gwarancjaCenyOfertowej",
+    quantity: fixedQty(1),
+    unitPrice: 1500,
+    notes: "Bez współczynnika trudny klient (zgodnie ze źródłem).",
   }),
 ];
 
