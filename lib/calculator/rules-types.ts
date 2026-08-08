@@ -995,6 +995,118 @@ export const DEFAULT_CALCULATOR_RULES: CalculatorRule[] = [
     unitPrice: 1500,
     notes: "Bez współczynnika trudny klient (zgodnie ze źródłem).",
   }),
+
+  // ==================================================================================
+  // INNE SYSTEMY — 1:1 odtworzenie calculateOtherSystems z engine.ts. 8 niezależnych
+  // systemów (żaden nie ma współczynnika trudny klient — jedyna kategoria bez niego) +
+  // rabat proporcjonalny do liczby wybranych spośród wszystkich 8.
+  // ==================================================================================
+  formulaRule({
+    key: "inne_systemy.sieciLan",
+    category: "inne_systemy",
+    label: "Sieć LAN i WiFi",
+    gate: "otherSystems_sieciLan",
+    expression: "IF(szafkaRackLan;600;0)+400+60+700*iloscAP+1400",
+    notes: "Zweryfikowane: 6660 zł (szafka=true, iloscAP=6) i 5960 zł na innym realnym przykładzie.",
+  }),
+  formulaRule({
+    key: "inne_systemy.telewizja",
+    category: "inne_systemy",
+    label: "Instalacja telewizji / anteny",
+    gate: "otherSystems_telewizja",
+    expression: "300+IF(multiswitchTv;800;0)+120+IF(multiswitchTv;1500*2;1500)+IF(szafaRackTv;600;0)",
+    notes: "Antena podwaja się z multiswitchem. Szafa RACK TV reużywa ceny szafki LAN (600 zł).",
+  }),
+  formulaRule({
+    key: "inne_systemy.wideodomofon",
+    category: "inne_systemy",
+    label: "Wideodomofon",
+    gate: "otherSystems_wideodomofon",
+    expression: "2800+IF(loxoneDoplataWideodomofon;270+1400;0)+IF(loxoneDoplataWideodomofon;500*2;500)",
+    notes: "Zweryfikowane: 5470 zł (loxoneDoplata=true) na 3 realnych przykładach.",
+  }),
+  formulaRule({
+    key: "inne_systemy.monitoring",
+    category: "inne_systemy",
+    label: "Monitoring",
+    gate: "otherSystems_monitoring",
+    expression:
+      "IF(monitoringRejestrator;600;0)" +
+      "+IF(iloscKamerMonitoringu>8;IF(monitoring8Mpx;600;400)*2;IF(monitoring8Mpx;600;400))" +
+      "+IF(monitoringRejestrator;IF(monitoring8Mpx;1100;800)*iloscKamerMonitoringu;0)" +
+      "+IF(monitoringRejestrator;0;IF(monitoring8Mpx;1300;800)*iloscKamerMonitoringu)" +
+      "+IF(monitoringRejestrator;IF(monitoring8Mpx;2100;1700);0)" +
+      "+IF(monitoringRejestrator;IF(monitoring8Mpx;1200;600);0)",
+    notes: "Zweryfikowane: 13300 zł (rejestrator=true, 8Mpx=true, 8 kamer) i 8100 zł na innym realnym przykładzie.",
+  }),
+  formulaRule({
+    key: "inne_systemy.multiroom",
+    category: "inne_systemy",
+    label: "System multiroom",
+    gate: "otherSystems_multiroom",
+    expression:
+      "1850" +
+      "+IF(iloscStrefMultiroom>4;(iloscStrefMultiroom-4)*925;0)" +
+      "+iloscGlosnikowMultiroom*430" +
+      "+iloscSkrzynekMultiroom*174.1" +
+      "+400" +
+      "+ROUNDUP(iloscStrefMultiroom/4;0)*564" +
+      "+200" +
+      "+(iloscStrefMultiroom*100+iloscGlosnikowMultiroom*200+1000)",
+    notes:
+      "W arkuszu źródłowym błędnie podpisane jako „Nagłośnienie - system multiroom”, mimo że to osobna pozycja od Nagłośnienia poniżej. Zweryfikowane: 6734 zł i 12068 zł na dwóch realnych przykładach.",
+  }),
+  formulaRule({
+    key: "inne_systemy.naglosnienie",
+    category: "inne_systemy",
+    label: "Nagłośnienie / kino domowe",
+    gate: "otherSystems_naglosnienie",
+    expression: "3000+4500+IF(glosnikWcNaglosnienie;430;0)+1000",
+    notes: "Zweryfikowane: 8500 zł — stała cena, potwierdzone że nie skaluje się żadnym parametrem domu.",
+  }),
+  formulaRule({
+    key: "inne_systemy.sauna",
+    category: "inne_systemy",
+    label: "Sauna ze sterowaniem",
+    gate: "otherSystems_sauna",
+    expression: "5430",
+    notes:
+      "Cena całkowicie stała (InneSystemy!V13, kolumna OPTIMUM) = Relay Ext 1300 + Styczniki 400 + Czujnik wilg. 730 + RGBW dimmer 350 + zasilacz 150 + robocizna 2500. Różna od martwego pola „Sauna” w sekcji Funkcjonalności (CRM!H13, bez żadnych referencji w skoroszycie).",
+  }),
+  formulaRule({
+    key: "inne_systemy.alarmTymczasowy",
+    category: "inne_systemy",
+    label: "Alarm tymczasowy na czas budowy",
+    gate: "otherSystems_alarmTymczasowy",
+    postMultipliers: ["wspolczynnikAlarmTymczasowy"],
+    expression: "1000",
+    notes: "Jedyna pozycja w tej kategorii z własnym, niezależnym współczynnikiem mnożącym (nie trudny klient).",
+  }),
+
+  formulaRule({
+    key: "inne_systemy.selectedCount",
+    category: "inne_systemy",
+    label: "Liczba wybranych systemów spośród 8 (pomocnicza)",
+    contributesToTotal: false,
+    expression:
+      "otherSystems_sieciLan+otherSystems_telewizja+otherSystems_wideodomofon+otherSystems_monitoring+otherSystems_naglosnienie+otherSystems_multiroom+otherSystems_sauna+otherSystems_alarmTymczasowy",
+  }),
+  formulaRule({
+    key: "inne_systemy.discountPercent",
+    category: "inne_systemy",
+    label: "Procent rabatu proporcjonalnego (pomocnicza)",
+    contributesToTotal: false,
+    notes: "Zaokrąglone jawnie w formule (nie tylko przy wyświetlaniu) — dokładnie jak w źródle, gdzie ten % wchodzi już zaokrąglony do dalszego wzoru na kwotę rabatu.",
+    expression: "IF(selectedCount>0;ROUND((selectedCount/8)*inneSystemyMaxPercent;2);0)",
+  }),
+  formulaRule({
+    key: "inne_systemy.rabatProporcjonalny",
+    category: "inne_systemy",
+    label: "Rabat proporcjonalny — inne systemy",
+    expression: "-1*ROUND(total_inne_systemy*(discountPercent/100);2)",
+    notes:
+      "Ujemna pozycja (rabat), deklarowana jako OSTATNIA reguła tej kategorii — total_inne_systemy to suma WSZYSTKICH wcześniejszych, już zaokrąglonych pozycji tej kategorii (automatycznie udostępniana przez silnik). Sauna i Alarm tymczasowy są rzadko wybierane, więc w praktyce rabat rzadko sięga pełnych 15%.",
+  }),
 ];
 
 export const CALCULATOR_RULES_ID = "calculator_rules";

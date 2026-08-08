@@ -130,6 +130,10 @@ export function evaluateRules(rules: CalculatorRule[], initialScope: FormulaScop
       // wartość (dokładnie jak w źródle: calculateFunctionalBudgets zaokrągla KAŻDĄ kategorię z
       // osobna, a dopiero wywołujący sumuje te już-zaokrąglone wartości).
       totalsByCategory[rule.category] = roundMoney((totalsByCategory[rule.category] ?? 0) + roundedValue);
+      // Suma kategorii "do tej pory" pod stałą nazwą — pozwala kolejnej regule w tej samej
+      // kategorii (np. rabat proporcjonalny na końcu) odwołać się do JUŻ ZAOKRĄGLONEJ sumy
+      // poprzednich pozycji, bez ręcznego powtarzania ich formuł (patrz "inne_systemy.rabat...").
+      scope[`total_${rule.category}`] = totalsByCategory[rule.category];
     } else {
       const key = groupKey(rule);
       rawGroupSums.set(key, (rawGroupSums.get(key) ?? 0) + rawValue);
@@ -260,6 +264,27 @@ export function buildScope(
     addon_konsultacjeZdalne24_7: answers.addons.konsultacjeZdalne24_7 ? 1 : 0,
     addon_przedluzenieGwarancji12Miesiecy: answers.addons.przedluzenieGwarancji12Miesiecy ? 1 : 0,
     addon_gwarancjaCenyOfertowej: answers.addons.gwarancjaCenyOfertowej ? 1 : 0,
+    otherSystems_sieciLan: answers.otherSystems.sieciLan ? 1 : 0,
+    otherSystems_telewizja: answers.otherSystems.telewizja ? 1 : 0,
+    otherSystems_wideodomofon: answers.otherSystems.wideodomofon ? 1 : 0,
+    otherSystems_monitoring: answers.otherSystems.monitoring ? 1 : 0,
+    otherSystems_naglosnienie: answers.otherSystems.naglosnienie ? 1 : 0,
+    otherSystems_multiroom: answers.otherSystems.multiroom ? 1 : 0,
+    otherSystems_sauna: answers.otherSystems.sauna ? 1 : 0,
+    otherSystems_alarmTymczasowy: answers.otherSystems.alarmTymczasowy ? 1 : 0,
+    szafkaRackLan: answers.szafkaRackLan ? 1 : 0,
+    iloscAP: answers.iloscAP,
+    multiswitchTv: answers.multiswitchTv ? 1 : 0,
+    szafaRackTv: answers.szafaRackTv ? 1 : 0,
+    loxoneDoplataWideodomofon: answers.loxoneDoplataWideodomofon ? 1 : 0,
+    monitoringRejestrator: answers.monitoringRejestrator ? 1 : 0,
+    monitoring8Mpx: answers.monitoring8Mpx ? 1 : 0,
+    glosnikWcNaglosnienie: answers.glosnikWcNaglosnienie ? 1 : 0,
+    iloscStrefMultiroom: answers.iloscStrefMultiroom,
+    iloscGlosnikowMultiroom: answers.iloscGlosnikowMultiroom,
+    iloscSkrzynekMultiroom: answers.iloscSkrzynekMultiroom,
+    wspolczynnikAlarmTymczasowy: answers.wspolczynnikAlarmTymczasowy,
+    inneSystemyMaxPercent: settings.discounts.inneSystemyMaxPercent,
     ...manualFields("iloscObwodowGniazd230V", answers.iloscObwodowGniazd230V),
     ...manualFields("iloscKolejnychGniazdObwody230V", answers.iloscKolejnychGniazdObwody230V),
     ...manualFields("iloscGniazd400V", answers.iloscGniazd400V),

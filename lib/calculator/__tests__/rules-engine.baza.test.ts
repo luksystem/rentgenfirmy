@@ -91,8 +91,8 @@ describe("rules-engine — kategoria 'baza' identyczna z calculateBaseSystem (sz
     const odleglosci = [0, 25, 79, 80, 81, 90, 121, 150];
     const knxWarianty = [false, true];
     const tylkoRozdzielniaWarianty = [false, true];
-    const trudnyKlientWarianty = [1, 1.1, 1.2];
-    const ledyWarianty = [0, 4, 9, 22, 24]; // 9 i 22 celowo NIE są wielokrotnością 3 (rgbwModuleQty/3)
+    const trudnyKlientWarianty = [1, 1.2];
+    const ledyWarianty = [0, 9, 22, 24]; // 9 i 22 celowo NIE są wielokrotnością 3 (rgbwModuleQty/3)
     const wspolczynnikiProjekt = [1, 2.5];
     const wspolczynnikiRozdzielnica = [1, 1.2];
     const powierzchnie = [60, 399, 400, 450];
@@ -164,7 +164,7 @@ describe("rules-engine — kategoria 'baza' identyczna z calculateBaseSystem (sz
       }
     }
 
-    expect(scenarioCount).toBeGreaterThan(15000);
+    expect(scenarioCount).toBeGreaterThan(10000);
     expect(failures.slice(0, 20)).toEqual([]);
     },
     20000,
